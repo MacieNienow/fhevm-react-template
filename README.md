@@ -6,40 +6,36 @@
 [![Zama](https://img.shields.io/badge/Powered%20by-Zama%20FHEVM-purple)](https://docs.zama.ai)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 
-**Built for the Zama FHE Challenge** - A universal SDK that makes building confidential applications simple, consistent, and intuitive for all Web3 developers.
+**Built for the Zama FHE Bounty Challenge** - A universal SDK that makes building confidential applications simple, consistent, and intuitive for all Web3 developers.
+
+---
+
+## 🌐 Live Demonstration
+
+**GitHub Repository**: [https://github.com/MacieNienow/fhevm-react-template](https://github.com/MacieNienow/fhevm-react-template)
+
+**Example Application**: [https://fhe-taxi-dispatch.vercel.app/](https://fhe-taxi-dispatch.vercel.app/)
+
+**Demo Video**: `demo.mp4` (Download to watch - streaming not available)
+
+The video demonstration showcases the complete SDK integration in a real-world ride-sharing application.
 
 ---
 
 ## 🎯 Overview
 
-This project introduces **@fhevm/sdk** - a universal, framework-agnostic SDK that wraps all FHEVM dependencies into a single, cohesive package with a wagmi-like API that Web3 developers already know and love.
+This project introduces **@fhevm/sdk** - a universal, framework-agnostic SDK that wraps all FHEVM dependencies into a single, cohesive package with an intuitive API that Web3 developers already know.
 
 ### ✨ Key Features
 
 - 🎯 **Framework Agnostic**: Works with Node.js, Next.js, React, Vue, or any JavaScript environment
 - 📦 **All-in-One Package**: Single dependency wraps fhevmjs, viem, and all required libraries
-- 🪝 **Wagmi-like API**: Familiar hooks-based interface (`useFhevm`, `useEncrypt`, `usePermit`)
+- 🪝 **Intuitive API**: Familiar hooks-based interface (`useFhevm`, `useEncrypt`, `usePermit`)
 - ⚡ **Quick Setup**: < 10 lines of code to get started with FHE
 - 🔐 **Complete FHE Flow**: Initialization → Encryption → Contract Interaction → Decryption
 - 🧩 **Modular & Reusable**: Clean, composable utilities adaptable to any framework
 - 📚 **Comprehensive Docs**: Detailed guides, examples, and API reference
 - 🚀 **Production Ready**: TypeScript, tested, and optimized for real applications
-
----
-
-## 🌐 Live Demo
-
-**Next.js Example**: [View Demo](https://private-ride-fhevm.vercel.app)
-
-**Video Demo**: [Watch on YouTube](#demo-video)
-
-### 📋 Example Applications
-
-| Application | Framework | Description | Live Demo |
-|-------------|-----------|-------------|-----------|
-| **Private Ride-Sharing** | Next.js 14 | Encrypted location and pricing | [View Demo](https://private-ride-fhevm.vercel.app) |
-| **React Counter** | React 18 | Simple encrypted counter | [View Demo](#) |
-| **Node.js CLI** | Node.js | Server-side FHE encryption | - |
 
 ---
 
@@ -73,7 +69,7 @@ const encrypted = await encryptValue(42, 'euint64');
 await contract.write.setValue([encrypted.data]);
 ```
 
-**That's it!** 🎉 You're now using FHE encryption in your dApp.
+**That's it!** 🎉 You're now using FHE encryption in your application.
 
 ### React Usage
 
@@ -126,7 +122,7 @@ fhevm-react-template/
 │
 ├── examples/
 │   ├── nextjs-example/         # Next.js 14 + App Router + RainbowKit
-│   │   ├── app/                # Private ride-sharing platform
+│   │   ├── app/                # Anonymous taxi dispatch system
 │   │   ├── components/         # Reusable FHE components
 │   │   ├── config/             # Contract ABIs and addresses
 │   │   ├── hooks/              # Custom hooks using @fhevm/sdk
@@ -146,6 +142,65 @@ fhevm-react-template/
 
 ---
 
+## 🎯 Real-World Example: Anonymous Taxi Dispatch
+
+**Live Demo**: [https://fhe-taxi-dispatch.vercel.app/](https://fhe-taxi-dispatch.vercel.app/)
+**Contract**: `0xd3cc141C38dac488bc1875140e538f0fAcEe7b26` (Sepolia)
+
+### Core Concept
+
+A privacy-preserving ride-sharing platform where sensitive information remains encrypted:
+
+- **Driver Locations**: GPS coordinates encrypted as `euint64`
+- **Ride Pricing**: Offers remain confidential until accepted
+- **Distance Calculations**: Computed on encrypted data using homomorphic operations
+- **Driver Ratings**: Aggregated without exposing individual ratings
+
+### SDK Integration Example
+
+```typescript
+import { useFhevm, useEncrypt } from '@fhevm/sdk/react';
+import { useWriteContract } from 'wagmi';
+
+function DriverRegistration() {
+  const { isReady } = useFhevm({
+    gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
+    chainId: 11155111,
+  });
+
+  const { encrypt } = useEncrypt('euint64');
+  const { writeContract } = useWriteContract();
+
+  const registerDriver = async (latitude: number, longitude: number) => {
+    // Convert to integers (multiply by 1e6 for precision)
+    const latInt = Math.floor(latitude * 1e6);
+    const lonInt = Math.floor(longitude * 1e6);
+
+    // Encrypt coordinates
+    const [encLat, encLon] = await Promise.all([
+      encrypt(latInt),
+      encrypt(lonInt),
+    ]);
+
+    // Submit to contract
+    await writeContract({
+      address: '0xd3cc141C38dac488bc1875140e538f0fAcEe7b26',
+      abi: TAXI_DISPATCH_ABI,
+      functionName: 'registerDriver',
+      args: [encLat.data, encLon.data],
+    });
+  };
+
+  return (
+    <button onClick={() => registerDriver(40.7128, -74.006)}>
+      Register as Driver
+    </button>
+  );
+}
+```
+
+---
+
 ## 🎯 Why This SDK?
 
 ### Before (Scattered Dependencies)
@@ -157,7 +212,6 @@ npm install fhevmjs ethers @fhevm/contracts
 // Complex setup
 import { createInstance } from 'fhevmjs';
 import { ethers } from 'ethers';
-import { getPublicKeyFromGateway } from './custom-utils';
 
 const instance = await createInstance({ ... });
 const publicKey = await getPublicKeyFromGateway(gatewayAddress);
@@ -200,15 +254,13 @@ import { useFhevm, useEncrypt } from '@fhevm/sdk/react';
 
 // Vue (Composition API)
 import { createFhevmInstance } from '@fhevm/sdk';
-import { ref, onMounted } from 'vue';
 ```
 
-### 2. Wagmi-like Hooks (React)
+### 2. Intuitive Hooks (React)
 
 Familiar API for Web3 developers:
 
 ```typescript
-// Similar to useAccount, useBalance from wagmi
 const { fhevm, isLoading, error, isReady } = useFhevm(config);
 const { encrypt, isEncrypting } = useEncrypt('euint64');
 const { createPermitSignature, isCreating } = usePermit(contractAddress, userAddress);
@@ -293,19 +345,13 @@ await contract.write.setValues(encrypted.map(e => e.data));
 
 ## 🎬 Demo Video
 
-<a id="demo-video"></a>
-
-### 📹 Video Demonstration
-
-**File**: [demo.mp4](./demo.mp4)
-
-**Watch on YouTube**: Coming Soon
+**File**: `demo.mp4` (Download required to watch)
 
 **Contents**:
 1. **Setup (0:00-1:30)**: Installing @fhevm/sdk and initializing FHEVM
 2. **Basic Usage (1:30-3:00)**: Encrypting values and submitting to contract
 3. **React Integration (3:00-5:00)**: Using hooks in Next.js application
-4. **Private Ride-Sharing Demo (5:00-8:00)**: Complete walkthrough of example dApp
+4. **Anonymous Taxi Dispatch Demo (5:00-8:00)**: Complete walkthrough of example application
 5. **Framework Flexibility (8:00-10:00)**: Showing Vue and Node.js integration
 6. **Design Choices (10:00-12:00)**: Architecture and API design decisions
 
@@ -317,187 +363,47 @@ await contract.write.setValues(encrypted.map(e => e.data));
 
 **Why?** FHE encryption is a universal need, not framework-specific.
 
-**How?** Pure TypeScript core with framework-specific adapters:
+**How?** Pure TypeScript core with framework-specific adapters.
 
-```
-@fhevm/sdk          → Core (works everywhere)
-@fhevm/sdk/react    → React hooks
-@fhevm/sdk/vue      → Vue composables (future)
-```
+### 2. Intuitive API
 
-### 2. Wagmi-like API
+**Why?** Lower barrier to entry for Web3 developers.
 
-**Why?** Web3 developers already know and love wagmi's API design.
-
-**How?** Similar naming and patterns:
-
-```typescript
-// Wagmi
-const { address } = useAccount();
-const { write } = useWriteContract();
-
-// @fhevm/sdk
-const { fhevm } = useFhevm(config);
-const { encrypt } = useEncrypt('euint64');
-```
+**How?** Familiar patterns and naming conventions.
 
 ### 3. Single Package
 
-**Why?** Reduce dependency hell and version conflicts.
+**Why?** Reduce dependency management complexity.
 
-**How?** Wrap all requirements (fhevmjs, viem, etc.) in one package:
-
-```json
-{
-  "dependencies": {
-    "fhevmjs": "^0.5.0",
-    "viem": "^2.17.0"
-  }
-}
-```
-
-Users only install `@fhevm/sdk` ✅
+**How?** Wrap all requirements in one package.
 
 ### 4. TypeScript First
 
-**Why?** Type safety prevents runtime errors with encryption.
+**Why?** Type safety prevents runtime errors.
 
-**How?** Complete type definitions for all APIs:
-
-```typescript
-export type EncryptedType =
-  | 'ebool'
-  | 'euint8'
-  | 'euint16'
-  | 'euint32'
-  | 'euint64'
-  | 'euint128'
-  | 'euint256'
-  | 'eaddress';
-```
+**How?** Complete type definitions for all APIs.
 
 ### 5. Minimal Setup
 
-**Why?** Lower barrier to entry = more adoption.
+**Why?** Faster onboarding = more adoption.
 
-**How?** Sensible defaults and auto-configuration:
-
-```typescript
-// Just 3 required fields
-const fhevm = await createFhevmInstance({
-  gatewayAddress: '0x...',
-  chainId: 11155111,
-  // rpcUrl is optional, aclAddress is optional
-});
-```
+**How?** Sensible defaults and auto-configuration.
 
 ---
 
-## 🏆 Evaluation Criteria
+## 🔗 Project Links
 
-### Usability ✅
+### Example Application
 
-- **Installation**: Single npm install
-- **Setup**: < 10 lines of code
-- **Learning Curve**: Familiar wagmi-like API
-- **Developer Experience**: Full TypeScript, IntelliSense, JSDoc
+- **Live Demo**: [https://fhe-taxi-dispatch.vercel.app/](https://fhe-taxi-dispatch.vercel.app/)
+- **GitHub**: [https://github.com/MacieNienow/fhevm-react-template](https://github.com/MacieNienow/fhevm-react-template)
+- **Contract**: [0xd3cc141C38dac488bc1875140e538f0fAcEe7b26](https://sepolia.etherscan.io/address/0xd3cc141C38dac488bc1875140e538f0fAcEe7b26)
 
-### Completeness ✅
+### Resources
 
-- ✅ **Initialization**: `createFhevmInstance`, `useFhevm`
-- ✅ **Encryption**: `encryptValue`, `encryptBatch`
-- ✅ **Decryption**: `createPermit`, `reencryptValue`
-- ✅ **Contract Interaction**: Compatible with viem/wagmi
-- ✅ **Error Handling**: Comprehensive error states
-
-### Reusability ✅
-
-- ✅ **Framework Agnostic**: Core works in Node.js, React, Vue, etc.
-- ✅ **Modular**: Import only what you need
-- ✅ **Composable**: Functions can be combined for complex flows
-- ✅ **Extendable**: Easy to add new encrypted types or features
-
-### Documentation ✅
-
-- ✅ **README**: Comprehensive guide (this file)
-- ✅ **SDK Docs**: Detailed API reference
-- ✅ **Examples**: 3 complete applications (Next.js, React, Node.js)
-- ✅ **Code Comments**: JSDoc for all public APIs
-- ✅ **Video Demo**: 12-minute walkthrough
-
-### Creativity ✅
-
-- ✅ **Multi-Framework**: Next.js, React, Node.js examples
-- ✅ **Real Use Case**: Private ride-sharing platform
-- ✅ **Innovative API**: Wagmi-like hooks for FHE
-- ✅ **Production Ready**: Security, performance, testing
-
----
-
-## 📁 Example Applications
-
-### 1. Private Ride-Sharing (Next.js)
-
-**Location**: `examples/nextjs-example/`
-
-**Features**:
-- Encrypted driver locations (euint64 coordinates)
-- Confidential ride pricing (encrypted offers)
-- Anonymous ratings (encrypted reviews)
-- Full integration with RainbowKit + Wagmi
-
-**Key Code**:
-
-```typescript
-import { useFhevm, useEncrypt } from '@fhevm/sdk/react';
-
-function DriverRegistration() {
-  const { isReady } = useFhevm({
-    gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
-    chainId: 11155111,
-  });
-
-  const { encrypt } = useEncrypt('euint64');
-
-  const register = async (lat: number, lon: number) => {
-    const [encLat, encLon] = await Promise.all([
-      encrypt(lat),
-      encrypt(lon)
-    ]);
-
-    await contract.write.registerDriver([encLat.data, encLon.data]);
-  };
-
-  return <button onClick={() => register(40.7128, -74.006)}>Register</button>;
-}
-```
-
-### 2. Encrypted Counter (React)
-
-**Location**: `examples/react-example/`
-
-**Features**:
-- Simple encrypted counter using euint32
-- Increment/decrement operations
-- Minimal example for learning
-
-### 3. CLI Encryption Tool (Node.js)
-
-**Location**: `examples/nodejs-example/`
-
-**Features**:
-- Server-side encryption
-- Batch processing
-- No browser required
-
----
-
-## 🔗 Deployment Links
-
-| Application | URL | Network |
-|-------------|-----|---------|
-| **Next.js Private Ride-Sharing** | [https://private-ride-fhevm.vercel.app](https://private-ride-fhevm.vercel.app) | Sepolia |
-| **React Counter Example** | [https://fhevm-counter.vercel.app](#) | Sepolia |
+- **Zama FHEVM**: [docs.zama.ai](https://docs.zama.ai)
+- **fhevmjs**: [github.com/zama-ai/fhevmjs](https://github.com/zama-ai/fhevmjs)
+- **Sepolia Testnet**: [sepolia.dev](https://sepolia.dev)
 
 ---
 
@@ -507,7 +413,7 @@ function DriverRegistration() {
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/fhevm-react-template.git
+git clone https://github.com/MacieNienow/fhevm-react-template.git
 cd fhevm-react-template
 
 # Install dependencies
@@ -548,7 +454,6 @@ Contributions welcome! This SDK is designed to be community-driven.
 - Angular services (`@fhevm/sdk/angular`)
 - Additional encrypted types
 - Performance optimizations
-- Documentation improvements
 
 ---
 
@@ -561,25 +466,17 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## 🙏 Acknowledgments
 
 - **Zama** for FHEVM technology and inspiration
-- **Wagmi** team for API design patterns
+- **Ethereum Foundation** for testnet infrastructure
 - **RainbowKit** for wallet integration patterns
 - **Viem** for Ethereum interactions
 - **fhevmjs** for core FHE functionality
 
 ---
 
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/fhevm-react-template/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/fhevm-react-template/discussions)
-- **Zama Docs**: [docs.zama.ai](https://docs.zama.ai)
-
----
-
-**Built with ❤️ for the Zama FHE Challenge** 🏆
+**Built for the Zama FHE Bounty Challenge** 🏆
 
 **Powered by**: [Zama FHEVM](https://docs.zama.ai) | **Network**: [Sepolia Testnet](https://sepolia.etherscan.io)
 
 ---
 
-> **Note**: This SDK is a competition submission demonstrating universal FHEVM integration. Suitable for development and testing. Additional security audits recommended for production use.
+> **Note**: This SDK is a bounty submission demonstrating universal FHEVM integration. The example application showcases an anonymous taxi dispatch system with encrypted driver locations and confidential pricing. Suitable for development and testing. Additional security audits recommended for production use.
