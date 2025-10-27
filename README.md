@@ -122,17 +122,20 @@ fhevm-react-template/
 │
 ├── examples/
 │   ├── nextjs-example/         # Next.js 14 + App Router + RainbowKit
-│   │   ├── app/                # Anonymous taxi dispatch system
-│   │   ├── components/         # Reusable FHE components
-│   │   ├── config/             # Contract ABIs and addresses
-│   │   ├── hooks/              # Custom hooks using @fhevm/sdk
-│   │   └── package.json
+│   │   ├── app/
+│   │   │   ├── page.tsx        # Main demo page with SDK integration
+│   │   │   └── providers.tsx   # FhevmProvider setup
+│   │   └── config/
+│   │       └── wagmi.ts        # Wagmi configuration
+│   │
+│   ├── PrivateTaxiDispatch/    # Standalone vanilla JavaScript example
+│   │   └── index.html          # Privacy-focused ride-sharing platform
 │   │
 │   ├── react-example/          # React 18 + Vite
-│   │   └── src/                # Simple encrypted counter
+│   │   └── src/                # Simple encrypted counter demo
 │   │
 │   └── nodejs-example/         # Node.js CLI
-│       └── index.ts            # Server-side encryption
+│       └── index.ts            # Server-side encryption examples
 │
 ├── demo.mp4                    # 📹 Video demonstration
 ├── README.md                   # This file
@@ -142,41 +145,61 @@ fhevm-react-template/
 
 ---
 
-## 🎯 Real-World Example: Anonymous Taxi Dispatch
+## 🎯 SDK Integration Examples
 
-**Live Demo**: [https://fhe-taxi-dispatch.vercel.app/](https://fhe-taxi-dispatch.vercel.app/)
-**Contract**: `0xd3cc141C38dac488bc1875140e538f0fAcEe7b26` (Sepolia)
+### Example 1: Next.js with React Hooks (Recommended)
 
-### Core Concept
+The `nextjs-example` demonstrates complete SDK integration with modern React patterns.
 
-A privacy-preserving ride-sharing platform where sensitive information remains encrypted:
+**Setup Provider** (`app/providers.tsx`):
 
-- **Driver Locations**: GPS coordinates encrypted as `euint64`
-- **Ride Pricing**: Offers remain confidential until accepted
-- **Distance Calculations**: Computed on encrypted data using homomorphic operations
-- **Driver Ratings**: Aggregated without exposing individual ratings
+```typescript
+import { FhevmProvider } from '@fhevm/sdk/react';
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 
-### SDK Integration Example
+export function Providers({ children }) {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          <FhevmProvider
+            config={{
+              gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
+              chainId: 11155111,
+              rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
+            }}
+          >
+            {children}
+          </FhevmProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+**Use in Components** (`app/page.tsx`):
 
 ```typescript
 import { useFhevm, useEncrypt } from '@fhevm/sdk/react';
 import { useWriteContract } from 'wagmi';
 
-function DriverRegistration() {
+export default function Home() {
   const { isReady } = useFhevm({
     gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
     chainId: 11155111,
   });
 
-  const { encrypt } = useEncrypt('euint64');
-  const { writeContract } = useWriteContract();
+  const { encrypt, isEncrypting } = useEncrypt('euint64');
+  const { writeContract, isPending } = useWriteContract();
 
   const registerDriver = async (latitude: number, longitude: number) => {
-    // Convert to integers (multiply by 1e6 for precision)
+    // Convert coordinates to integers (multiply by 1e6 for precision)
     const latInt = Math.floor(latitude * 1e6);
     const lonInt = Math.floor(longitude * 1e6);
 
-    // Encrypt coordinates
+    // Encrypt coordinates using @fhevm/sdk
     const [encLat, encLon] = await Promise.all([
       encrypt(latInt),
       encrypt(lonInt),
@@ -184,20 +207,85 @@ function DriverRegistration() {
 
     // Submit to contract
     await writeContract({
-      address: '0xd3cc141C38dac488bc1875140e538f0fAcEe7b26',
-      abi: TAXI_DISPATCH_ABI,
+      address: CONTRACT_ADDRESS,
+      abi: PRIVATE_TAXI_DISPATCH_ABI,
       functionName: 'registerDriver',
       args: [encLat.data, encLon.data],
     });
   };
 
   return (
-    <button onClick={() => registerDriver(40.7128, -74.006)}>
-      Register as Driver
+    <button
+      onClick={() => registerDriver(40.7128, -74.006)}
+      disabled={!isReady || isEncrypting || isPending}
+    >
+      {isEncrypting || isPending ? 'Processing...' : 'Register Driver'}
     </button>
   );
 }
 ```
+
+**Key Features Demonstrated**:
+- ✅ `FhevmProvider` for global SDK initialization
+- ✅ `useFhevm` hook for ready state management
+- ✅ `useEncrypt` hook with loading states
+- ✅ Parallel encryption with `Promise.all`
+- ✅ Integration with Wagmi and RainbowKit
+- ✅ Proper error handling and UI feedback
+
+### Example 2: Private Taxi Dispatch Platform
+
+The `PrivateTaxiDispatch` example showcases a complete privacy-first ride-sharing application using vanilla JavaScript with the SDK.
+
+**Live Demo**: [https://private-taxi-dispatch.vercel.app/](https://private-taxi-dispatch.vercel.app/)
+**Contract**: `0xd3cc141c38dac488bc1875140e538f0facee7b26` (Sepolia)
+
+**Core Features**:
+- 🔐 **Encrypted Driver Locations**: GPS coordinates encrypted with FHE (`euint64`)
+- 🚗 **Confidential Ride Offers**: Prices remain private until accepted
+- ⭐ **Anonymous Ratings**: Driver ratings computed on encrypted data
+- 💼 **Identity Protection**: Both drivers and passengers remain anonymous
+- 🔗 **Smart Contract Integration**: Automated matching and payments
+
+**Privacy Guarantees**:
+- Driver locations never exposed publicly
+- Passenger pickup/destination coordinates remain confidential
+- Fare negotiations through encrypted offers
+- Rating systems without identity exposure
+- Zero-knowledge proof implementations
+
+### Example 3: Framework-Agnostic Core API
+
+For non-React environments or server-side usage:
+
+```typescript
+import { createFhevmInstance, encryptValue, FhevmClient } from '@fhevm/sdk';
+
+// Option 1: Functional API
+const fhevm = await createFhevmInstance({
+  gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
+  chainId: 11155111,
+});
+
+const encrypted = await encryptValue(42, 'euint64');
+console.log('Encrypted data:', encrypted.hex);
+
+// Option 2: Class-based API
+const client = new FhevmClient({
+  gatewayAddress: '0x79d6742b1Bf62452bfcBC6b137ed4eA1ba459a6B',
+  chainId: 11155111,
+});
+
+await client.init();
+const encValue = await client.encrypt(100, 'euint32');
+```
+
+**Use Cases**:
+- Node.js backend services
+- CLI tools
+- Testing frameworks
+- Vue/Svelte/Angular applications
+- Serverless functions
 
 ---
 
@@ -321,7 +409,24 @@ await contract.write.setValues(encrypted.map(e => e.data));
 
 - **Core API**: [packages/fhevm-sdk/README.md](./packages/fhevm-sdk/README.md)
 - **React Hooks**: [packages/fhevm-sdk/README.md#react-hooks](./packages/fhevm-sdk/README.md#react-hooks)
-- **Examples**: [examples/](./examples/)
+- **Examples Directory**: [examples/](./examples/)
+
+### Examples Overview
+
+The `examples/` directory contains four comprehensive demonstrations of SDK integration:
+
+| Example | Framework | Key Features | Best For |
+|---------|-----------|--------------|----------|
+| **nextjs-example** | Next.js 14 + React | FhevmProvider, React hooks, RainbowKit integration | Modern React apps, recommended starting point |
+| **PrivateTaxiDispatch** | Vanilla JS | Complete privacy platform, real-world use case | Understanding FHE applications, production patterns |
+| **react-example** | React 18 + Vite | Simple counter, minimal setup | Learning core concepts, quick prototyping |
+| **nodejs-example** | Node.js | Server-side encryption, CLI tools | Backend services, testing, automation |
+
+Each example includes:
+- Complete source code with comments
+- Step-by-step setup instructions
+- Integration patterns and best practices
+- Real contract interactions on Sepolia testnet
 
 ### Key Functions
 
@@ -336,8 +441,9 @@ await contract.write.setValues(encrypted.map(e => e.data));
 | `useEncrypt(type)` | Encryption hook | React |
 | `usePermit(...)` | Permit creation hook | React |
 | `FhevmClient` | Class-based API | All |
+| `FhevmProvider` | React context provider | React |
 
-### Supported Types
+### Supported Encrypted Types
 
 `ebool`, `euint4`, `euint8`, `euint16`, `euint32`, `euint64`, `euint128`, `euint256`, `eaddress`
 
@@ -393,11 +499,14 @@ await contract.write.setValues(encrypted.map(e => e.data));
 
 ## 🔗 Project Links
 
-### Example Application
+### Example Applications
 
-- **Live Demo**: [https://fhe-taxi-dispatch.vercel.app/](https://fhe-taxi-dispatch.vercel.app/)
-- **GitHub**: [https://github.com/MacieNienow/fhevm-react-template](https://github.com/MacieNienow/fhevm-react-template)
-- **Contract**: [0xd3cc141C38dac488bc1875140e538f0fAcEe7b26](https://sepolia.etherscan.io/address/0xd3cc141C38dac488bc1875140e538f0fAcEe7b26)
+- **Next.js Demo**: See `examples/nextjs-example` for complete React integration
+- **Private Taxi Dispatch**: [https://private-taxi-dispatch.vercel.app/](https://private-taxi-dispatch.vercel.app/)
+- **GitHub Repository**: [https://github.com/MacieNienow/fhevm-react-template](https://github.com/MacieNienow/fhevm-react-template)
+- **Smart Contracts**:
+  - Next.js Example: `0x9e77F5121215474e473401E9768a517DAFde1f87` (Sepolia)
+  - Taxi Dispatch: `0xd3cc141c38dac488bc1875140e538f0facee7b26` (Sepolia)
 
 ### Resources
 
@@ -422,11 +531,65 @@ npm install
 # Build SDK
 cd packages/fhevm-sdk
 npm run build
+```
 
-# Run Next.js example
-cd ../../examples/nextjs-example
+### Running Examples
+
+#### Next.js Example (Recommended)
+
+```bash
+cd examples/nextjs-example
+npm install
+npm run dev
+# Open http://localhost:3000
+```
+
+Features demonstrated:
+- FhevmProvider setup in Next.js 14 App Router
+- useFhevm and useEncrypt hooks
+- Integration with Wagmi and RainbowKit
+- Encrypted driver registration
+- Real-time encryption status
+
+#### Private Taxi Dispatch Example
+
+```bash
+cd examples/PrivateTaxiDispatch
+# Open index.html in browser or serve with local server
+```
+
+Features demonstrated:
+- Complete privacy-first ride-sharing platform
+- Vanilla JavaScript integration
+- Driver and passenger workflows
+- Encrypted location handling
+- Anonymous rating system
+
+#### React Example
+
+```bash
+cd examples/react-example
+npm install
 npm run dev
 ```
+
+Features demonstrated:
+- Simple encrypted counter
+- React 18 + Vite setup
+- Core SDK usage patterns
+
+#### Node.js Example
+
+```bash
+cd examples/nodejs-example
+npm install
+node index.ts
+```
+
+Features demonstrated:
+- Server-side encryption
+- CLI integration
+- Backend service patterns
 
 ### Testing
 
