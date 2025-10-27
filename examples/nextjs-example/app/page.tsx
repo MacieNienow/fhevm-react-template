@@ -1,92 +1,65 @@
 'use client';
 
-import { useFhevm, useEncrypt } from '@fhevm/sdk/react';
-import { useAccount, useWriteContract } from 'wagmi';
 import { useState } from 'react';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { EncryptionDemo } from '../components/fhe/EncryptionDemo';
+import { ComputationDemo } from '../components/fhe/ComputationDemo';
+import { KeyManager } from '../components/fhe/KeyManager';
+import { BankingExample } from '../components/examples/BankingExample';
+import { MedicalExample } from '../components/examples/MedicalExample';
+import { FHEProvider, useFHEContext } from '../components/fhe/FHEProvider';
+import { Card } from '../components/ui/Card';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PRIVATE_TAXI_DISPATCH_ADDRESS as `0x${string}`;
+type TabType = 'overview' | 'encryption' | 'computation' | 'keys' | 'banking' | 'medical';
 
-const PRIVATE_TAXI_DISPATCH_ABI = [
-  {
-    inputs: [
-      { internalType: 'bytes', name: 'encLat', type: 'bytes' },
-      { internalType: 'bytes', name: 'encLon', type: 'bytes' },
-    ],
-    name: 'registerDriver',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-] as const;
+function StatusBadge({ label, status, isReady }: { label: string; status: string; isReady: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-500' : 'bg-yellow-500'}`} />
+      <span className="text-sm text-gray-300">
+        <span className="font-semibold">{label}:</span> {status}
+      </span>
+    </div>
+  );
+}
 
-export default function Home() {
-  const { isReady } = useFhevm({
-    gatewayAddress: process.env.NEXT_PUBLIC_TAXI_GATEWAY_ADDRESS as `0x${string}`,
-    chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 11155111),
-  });
+function HomePage() {
+  const { isReady } = useFHEContext();
+  const { isConnected } = useAccount();
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-  const { address, isConnected } = useAccount();
-  const { encrypt, isEncrypting } = useEncrypt('euint64');
-  const { writeContract, isPending } = useWriteContract();
-
-  const [latitude, setLatitude] = useState('40.7128');
-  const [longitude, setLongitude] = useState('-74.0060');
-  const [status, setStatus] = useState('');
-
-  const handleRegisterDriver = async () => {
-    try {
-      setStatus('Encrypting location...');
-
-      // Convert coordinates to integers (multiply by 1e6 for precision)
-      const latInt = Math.floor(parseFloat(latitude) * 1e6);
-      const lonInt = Math.floor(parseFloat(longitude) * 1e6);
-
-      // Encrypt coordinates using @fhevm/sdk
-      const [encLat, encLon] = await Promise.all([
-        encrypt(latInt),
-        encrypt(lonInt),
-      ]);
-
-      setStatus('Submitting to blockchain...');
-
-      // Submit to contract
-      await writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: PRIVATE_TAXI_DISPATCH_ABI,
-        functionName: 'registerDriver',
-        args: [encLat.data, encLon.data],
-      });
-
-      setStatus('✅ Driver registered successfully!');
-    } catch (error) {
-      console.error('Error:', error);
-      setStatus(`❌ Error: ${(error as Error).message}`);
-    }
-  };
+  const tabs: { id: TabType; label: string; icon: string }[] = [
+    { id: 'overview', label: 'Overview', icon: '🏠' },
+    { id: 'encryption', label: 'Encryption', icon: '🔐' },
+    { id: 'computation', label: 'Computation', icon: '⚡' },
+    { id: 'keys', label: 'Keys', icon: '🔑' },
+    { id: 'banking', label: 'Banking', icon: '💰' },
+    { id: 'medical', label: 'Medical', icon: '🏥' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-black p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-black p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4">
-            🔐 Private Ride Platform
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            FHE SDK Complete Demo
           </h1>
-          <p className="text-xl text-gray-300">
+          <p className="text-lg md:text-xl text-gray-300">
             Powered by <span className="text-purple-400 font-semibold">@fhevm/sdk</span>
           </p>
           <p className="text-sm text-gray-400 mt-2">
-            Encrypted locations • Confidential pricing • Anonymous ratings
+            Next.js 14 • React Hooks • Fully Homomorphic Encryption
           </p>
         </div>
 
         {/* Connection Status */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-6">
-          <div className="flex justify-between items-center">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h2 className="text-lg font-semibold text-white mb-2">Connection Status</h2>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 <StatusBadge
                   label="FHEVM"
                   status={isReady ? 'Ready' : 'Loading...'}
@@ -103,147 +76,138 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SDK Demo */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">
-            SDK Demo: Register as Driver
-          </h2>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Latitude
-              </label>
-              <input
-                type="text"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="40.7128"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Longitude
-              </label>
-              <input
-                type="text"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="-74.0060"
-              />
-            </div>
+        {/* Tab Navigation */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <button
-            onClick={handleRegisterDriver}
-            disabled={!isReady || !isConnected || isEncrypting || isPending}
-            className="w-full py-4 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isEncrypting || isPending
-              ? 'Processing...'
-              : 'Register Driver (Encrypted)'}
-          </button>
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-fade-in">
+              <Card title="Welcome to FHE SDK Demo" description="Explore comprehensive FHE integration examples">
+                <div className="space-y-4">
+                  <p className="text-gray-300">
+                    This demonstration showcases the complete capabilities of <strong className="text-purple-400">@fhevm/sdk</strong> with Next.js 14.
+                    Explore various FHE operations through interactive examples.
+                  </p>
 
-          {status && (
-            <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/20">
-              <p className="text-sm text-gray-300">{status}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                      <h4 className="text-lg font-semibold text-purple-300 mb-2">Core Features</h4>
+                      <ul className="text-sm text-gray-300 space-y-1">
+                        <li>✓ Value encryption with multiple types</li>
+                        <li>✓ Homomorphic computations</li>
+                        <li>✓ Key management</li>
+                        <li>✓ API route examples</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                      <h4 className="text-lg font-semibold text-blue-300 mb-2">Use Cases</h4>
+                      <ul className="text-sm text-gray-300 space-y-1">
+                        <li>✓ Private banking transactions</li>
+                        <li>✓ Confidential medical records</li>
+                        <li>✓ Anonymous voting systems</li>
+                        <li>✓ Encrypted data analytics</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30 mt-4">
+                    <h4 className="text-sm font-semibold text-green-300 mb-2">Getting Started</h4>
+                    <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
+                      <li>Ensure your wallet is connected</li>
+                      <li>Wait for FHEVM to initialize</li>
+                      <li>Explore different tabs to see FHE in action</li>
+                      <li>Try the banking and medical examples for real-world scenarios</li>
+                    </ol>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {tabs.slice(1).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all text-left"
+                  >
+                    <div className="text-4xl mb-3">{tab.icon}</div>
+                    <h4 className="text-lg font-semibold text-white mb-2">{tab.label}</h4>
+                    <p className="text-sm text-gray-400">
+                      {tab.id === 'encryption' && 'Encrypt values with various types'}
+                      {tab.id === 'computation' && 'Perform homomorphic operations'}
+                      {tab.id === 'keys' && 'Manage encryption keys'}
+                      {tab.id === 'banking' && 'Private financial transactions'}
+                      {tab.id === 'medical' && 'Confidential health records'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'encryption' && (
+            <div className="animate-fade-in">
+              <EncryptionDemo />
+            </div>
+          )}
+
+          {activeTab === 'computation' && (
+            <div className="animate-fade-in">
+              <ComputationDemo />
+            </div>
+          )}
+
+          {activeTab === 'keys' && (
+            <div className="animate-fade-in">
+              <KeyManager />
+            </div>
+          )}
+
+          {activeTab === 'banking' && (
+            <div className="animate-fade-in">
+              <BankingExample />
+            </div>
+          )}
+
+          {activeTab === 'medical' && (
+            <div className="animate-fade-in">
+              <MedicalExample />
             </div>
           )}
         </div>
 
-        {/* Code Example */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mt-6">
-          <h3 className="text-xl font-bold text-white mb-4">
-            📝 How It Works
-          </h3>
-
-          <div className="bg-black/30 rounded-lg p-4 overflow-x-auto">
-            <pre className="text-sm text-gray-300">
-              <code>{`import { useEncrypt } from '@fhevm/sdk/react';
-
-// 1. Initialize encryption hook
-const { encrypt, isEncrypting } = useEncrypt('euint64');
-
-// 2. Encrypt values
-const [encLat, encLon] = await Promise.all([
-  encrypt(latitude),
-  encrypt(longitude),
-]);
-
-// 3. Submit to contract
-await writeContract({
-  address: CONTRACT_ADDRESS,
-  abi: ABI,
-  functionName: 'registerDriver',
-  args: [encLat.data, encLon.data],
-});`}</code>
-            </pre>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <FeatureCard
-            icon="🔐"
-            title="Encrypted Locations"
-            description="Driver coordinates encrypted with FHE"
-          />
-          <FeatureCard
-            icon="⚡"
-            title="< 10 Lines"
-            description="Quick setup with @fhevm/sdk"
-          />
-          <FeatureCard
-            icon="🎯"
-            title="Wagmi-like API"
-            description="Familiar hooks for Web3 devs"
-          />
+        {/* Footer */}
+        <div className="mt-12 text-center text-sm text-gray-400">
+          <p>Built with @fhevm/sdk • Next.js 14 • Tailwind CSS</p>
+          <p className="mt-2">Demonstrating complete FHE integration</p>
         </div>
       </div>
     </div>
   );
 }
 
-function StatusBadge({
-  label,
-  status,
-  isReady,
-}: {
-  label: string;
-  status: string;
-  isReady: boolean;
-}) {
+export default function Home() {
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className={`w-2 h-2 rounded-full ${
-          isReady ? 'bg-green-500' : 'bg-yellow-500'
-        }`}
-      />
-      <span className="text-sm text-gray-300">
-        <span className="font-semibold">{label}:</span> {status}
-      </span>
-    </div>
-  );
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-      <div className="text-4xl mb-3">{icon}</div>
-      <h4 className="text-lg font-semibold text-white mb-2">{title}</h4>
-      <p className="text-sm text-gray-400">{description}</p>
-    </div>
+    <FHEProvider>
+      <HomePage />
+    </FHEProvider>
   );
 }

@@ -1,0 +1,16 @@
+{
+  "name": "private-taxi-dispatch",
+  "version": "1.0.0",
+  "description": "Secure & Private Ride Sharing on Blockchain",
+  "main": "public/index.html",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "echo 'Static site - use a web server'"
+  },
+  "keywords": ["blockchain", "ethereum", "taxi", "ride-sharing", "privacy", "fhe"],
+  "author": "Anonymous",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
