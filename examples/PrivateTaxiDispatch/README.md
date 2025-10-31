@@ -1,11 +1,13 @@
-# Private Taxi Dispatch
+# Private Taxi Dispatch - React Edition
 
-A privacy-focused taxi management system built on blockchain technology with Fully Homomorphic Encryption (FHE) for anonymous ride-sharing operations.
+A privacy-preserving ride-sharing platform built with React, Vite, and Fully Homomorphic Encryption (FHE) using the `@fhevm/sdk`.
+
+> **Note**: This application has been converted from vanilla JavaScript to React with full `@fhevm/sdk` integration. The legacy static version is preserved in the `public/legacy/` directory.
 
 ## 🚀 Live Demo
 
 **Website**: [https://private-taxi-dispatch.vercel.app/](https://private-taxi-dispatch.vercel.app/)
-**GitHub Repository**: [https://github.com/MacieNienow/PrivateTaxiDispatch](https://github.com/MacieNienow/PrivateTaxiDispatch)
+ 
 
 ## 📖 Project Core Concepts
 
@@ -172,7 +174,6 @@ This project is open-source and available under the MIT License.
 ## 🔗 Links
 
 - **Live Application**: [https://private-taxi-dispatch.vercel.app/](https://private-taxi-dispatch.vercel.app/)
-- **Source Code**: [https://github.com/MacieNienow/PrivateTaxiDispatch](https://github.com/MacieNienow/PrivateTaxiDispatch)
 - **Smart Contract**: `0xd3cc141c38dac488bc1875140e538f0facee7b26`
 
 ---
