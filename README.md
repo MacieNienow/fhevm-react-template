@@ -1,4 +1,4 @@
-# 🔐 Universal FHEVM SDK
+# Universal FHEVM SDK
 
 **Next-generation FHEVM SDK for building confidential frontends** - Framework-agnostic, developer-friendly, and production-ready.
 
@@ -106,10 +106,19 @@ function App() {
 ```
 fhevm-react-template/
 ├── packages/
-│   └── fhevm-sdk/              # 🎯 Main SDK Package
+│   └── fhevm-sdk/              # Main SDK Package
 │       ├── src/
+│       │   ├── core/           # Core logic
+│       │   │   └── fhevm.ts    # FhevmClient class
+│       │   ├── hooks/          # React hooks
+│       │   │   └── useFhevm.ts # React integration
+│       │   ├── adapters/       # Framework adapters
+│       │   ├── utils/          # Utility functions
+│       │   │   ├── encryption.ts
+│       │   │   └── decryption.ts
+│       │   ├── types/          # Type definitions
 │       │   ├── index.ts        # Core exports (framework-agnostic)
-│       │   ├── react.ts        # React hooks (useFhevm, useEncrypt, usePermit)
+│       │   ├── react.ts        # React hooks exports
 │       │   ├── client.ts       # FhevmClient class
 │       │   ├── instance.ts     # Instance management
 │       │   ├── encryption.ts   # Encryption utilities
@@ -120,25 +129,57 @@ fhevm-react-template/
 │       ├── tsconfig.json
 │       └── README.md           # SDK documentation
 │
-├── examples/
+├── templates/                  # Template projects
+│   └── nextjs/                 # Next.js template (symlink to examples/nextjs-example)
+│
+├── examples/                   # Usage examples
 │   ├── nextjs-example/         # Next.js 14 + App Router + RainbowKit
-│   │   ├── app/
-│   │   │   ├── page.tsx        # Main demo page with SDK integration
-│   │   │   └── providers.tsx   # FhevmProvider setup
+│   │   ├── app/                # App Router
+│   │   │   ├── page.tsx        # Main demo page
+│   │   │   ├── layout.tsx      # Root layout
+│   │   │   ├── providers.tsx   # FhevmProvider setup
+│   │   │   └── api/            # API routes
+│   │   │       └── fhe/        # FHE API endpoints
+│   │   ├── components/         # React components
+│   │   │   ├── ui/             # UI components
+│   │   │   ├── fhe/            # FHE components
+│   │   │   └── examples/       # Example components
+│   │   ├── lib/                # Library code
+│   │   │   ├── fhe/            # FHE integration
+│   │   │   └── utils/          # Utility functions
+│   │   ├── hooks/              # Custom hooks
+│   │   ├── types/              # Type definitions
 │   │   └── config/
 │   │       └── wagmi.ts        # Wagmi configuration
 │   │
-│   ├── PrivateTaxiDispatch/    # Standalone vanilla JavaScript example
-│   │   └── index.html          # Privacy-focused ride-sharing platform
-│   │
 │   ├── react-example/          # React 18 + Vite
-│   │   └── src/                # Simple encrypted counter demo
+│   │   ├── src/
+│   │   │   ├── App.tsx         # Main app component
+│   │   │   └── main.tsx        # Entry point
+│   │   ├── package.json
+│   │   └── vite.config.ts
 │   │
-│   └── nodejs-example/         # Node.js CLI
-│       └── index.ts            # Server-side encryption examples
+│   ├── nodejs-example/         # Node.js CLI
+│   │   ├── index.ts            # Server-side encryption examples
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   └── PrivateTaxiDispatch/    # Real-world React application
+│       ├── src/                # React + Vite application
+│       │   ├── components/     # React components
+│       │   ├── App.tsx         # Main application
+│       │   └── main.tsx        # Entry point
+│       ├── public/             # Static assets (legacy vanilla JS in public/legacy/)
+│       ├── contracts/          # Smart contract source
+│       ├── vite.config.ts      # Vite configuration
+│       └── package.json        # Dependencies with @fhevm/sdk
 │
-├── demo.mp4                    # 📹 Video demonstration
+├── docs/                       # Documentation
+│   └── API.md                  # Complete API reference
+│
+├── demo.mp4                    # Video demonstration
 ├── README.md                   # This file
+├── INTEGRATION_GUIDE.md        # Integration guide
 ├── LICENSE                     # MIT License
 └── package.json                # Monorepo configuration
 ```
@@ -235,7 +276,7 @@ export default function Home() {
 
 ### Example 2: Private Taxi Dispatch Platform
 
-The `PrivateTaxiDispatch` example showcases a complete privacy-first ride-sharing application using vanilla JavaScript with the SDK.
+The `PrivateTaxiDispatch` example showcases a complete privacy-first ride-sharing application built with React, Vite, and full `@fhevm/sdk` integration.
 
 **Live Demo**: [https://private-taxi-dispatch.vercel.app/](https://private-taxi-dispatch.vercel.app/)
 **Contract**: `0xd3cc141c38dac488bc1875140e538f0facee7b26` (Sepolia)
@@ -418,7 +459,7 @@ The `examples/` directory contains four comprehensive demonstrations of SDK inte
 | Example | Framework | Key Features | Best For |
 |---------|-----------|--------------|----------|
 | **nextjs-example** | Next.js 14 + React | FhevmProvider, React hooks, RainbowKit integration | Modern React apps, recommended starting point |
-| **PrivateTaxiDispatch** | Vanilla JS | Complete privacy platform, real-world use case | Understanding FHE applications, production patterns |
+| **PrivateTaxiDispatch** | React 18 + Vite | Complete privacy platform, real-world ride-sharing with FHE | Understanding FHE applications, production patterns |
 | **react-example** | React 18 + Vite | Simple counter, minimal setup | Learning core concepts, quick prototyping |
 | **nodejs-example** | Node.js | Server-side encryption, CLI tools | Backend services, testing, automation |
 
@@ -555,15 +596,19 @@ Features demonstrated:
 
 ```bash
 cd examples/PrivateTaxiDispatch
-# Open index.html in browser or serve with local server
+npm install
+npm run dev
+# Open http://localhost:3002
 ```
 
 Features demonstrated:
 - Complete privacy-first ride-sharing platform
-- Vanilla JavaScript integration
-- Driver and passenger workflows
-- Encrypted location handling
+- React 18 + Vite with @fhevm/sdk integration
+- Driver and passenger workflows with encrypted locations
+- Encrypted ride offers with confidential fares
 - Anonymous rating system
+- Wagmi and wallet integration
+- Tab-based UI for different user roles
 
 #### React Example
 
